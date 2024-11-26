@@ -1,0 +1,5 @@
+<apex:page standardController="Account" extensions="BatchInitiator">
+    <apex:form>
+        <apex:commandButton value="バッチ処理開始" action="{!startBatchProcess}" />
+    </apex:form>
+</apex:page>

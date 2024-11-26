@@ -1,0 +1,169 @@
+<template>
+    <!-- 検索条件エリア -->
+    <lightning-card title="取引先検索条件">
+        <div class="slds-p-around_medium">
+            <div class="slds-grid slds-gutters">
+                <div class="slds-col">
+                    <lightning-input
+                        label="検索テキスト"
+                        value={searchText}
+                        onchange={handleInputChange}
+                        field-level-help="テキストを入力して検索"
+                    ></lightning-input>
+                </div>
+                <div class="slds-col">
+                    <lightning-combobox
+                        label="レコードタイプ"
+                        value={recordTypeId}
+                        options={recordTypeOptions}
+                        onchange={handleRecordTypeChange}
+                        field-level-help="レコードタイプを選択してください。"
+                    ></lightning-combobox>
+                </div>
+                <div class="slds-col">
+                    <lightning-combobox
+                        label="業種"
+                        value={industry}
+                        options={industryOptions}
+                        onchange={handleIndustryChange}
+                        field-level-help="業種を選択してください。"
+                    ></lightning-combobox>
+                </div>
+                <div class="slds-col">
+                    <lightning-combobox
+                        label="表示件数"
+                        value={showSize}
+                        options={displayRecordOptions}
+                        onchange={handleDisplayRecordChange}
+                        field-level-help="１ページに表示するレコードの件数を選択できます。"
+                    ></lightning-combobox>
+                </div>
+            </div>
+                
+            <!-- ボタンエリア -->
+            <div class="slds-p-around_medium">
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col">
+                        <!-- 検索ボタン -->
+                        <lightning-button label="検索" onclick={handleSearch}></lightning-button>
+                    </div>
+                    <div class="slds-col">
+                        <!-- 新規取引先作成ボタン -->
+                        <lightning-button label="新規取引先作成" onclick={openModal}></lightning-button>
+                        <template if:true={isModalOpen}>
+                            <section class="slds-modal slds-fade-in-open" role="dialog" tabindex="-1" aria-modal="true">
+                                <div class="slds-modal__container">
+                                    <header class="slds-modal__header">
+                                        <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse" title="Close" onclick={closeModal}>
+                                            <lightning-icon icon-name="utility:close" alternative-text="close" size="small"></lightning-icon>
+                                            <span class="slds-assistive-text">Close</span>
+                                        </button>
+                                        <h2 class="slds-text-heading_medium">新規取引先作成</h2>
+                                    </header>
+
+                                    <div class="slds-modal__content slds-p-around_medium" style="height: auto;">
+                                        <lightning-record-edit-form
+                                            object-api-name="Account"
+                                            onsuccess={handleSuccess}
+                                            onerror={handleError}
+                                        >
+                                            <lightnig-messages></lightnig-messages>
+                                            <lightning-input-field field-name="Name"></lightning-input-field>
+                                            <lightning-input-field field-name="Phone"></lightning-input-field>
+                                            <lightning-input-field field-name="Website"></lightning-input-field>
+
+                                            <div class="slds-grid slds-gutters">
+                                                <lightning-button class="slds-col" variant="neutral" label="キャンセル" title="Cancel" onclick={closeModal}></lightning-button>
+                                                <lightning-button class="slds-col" variant="brand" type="submit" name="save" label="保存"></lightning-button>
+                                            </div>
+                                        </lightning-record-edit-form>
+                                    </div>
+                                </div>
+                            </section>
+                            <div class="slds-backdrop slds-backdrop_open"></div>
+                        </template>
+                        <div class="slds-col">
+                            <!-- 削除ボタン -->
+                            <lightning-button label="削除" onclick={handleDelete}></lightning-button>
+                        </div>
+                        <div class="slds-col">
+                            <!-- CSV出力ボタン -->
+                            <lightning-button label="CSV出力" variant="brand" title="Export Data Into CSV" icon-name="utility:download" onclick={handleExport} disabled={checkRecord}></lightning-button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </lightning-card>
+
+    <!-- 検索エリアと結果表示エリアの間に空白を設定 -->
+    <div class="slds-m-top_medium"></div>
+
+    <!-- 検索結果エリア -->
+    <lightning-card title="検索結果">
+        <!-- データ件数表示 -->
+        <div class="slds-m-around_medium">
+            <p class="slds-m-vertical_medium content">
+                {resultMessage}
+            </p>
+            <template if:true={resultDisplay}>
+                <p class="slds-m-vertical_medium content">
+                    {totalRecount}件中&nbsp;{startRecord}件～{endRecord}件を表示中。
+                    {page}/{totalPage}ページ
+                </p>
+            </template>
+        </div>
+
+        <!-- 検索結果のレコード表示 -->
+        <div class="slds-p-around_medium">
+            <template if:true={accounts}>
+                <lightning-datatable
+                    key-field="Id"
+                    data={accounts}
+                    columns={columns}
+                    onsave={handleSave}
+                    draft-values={draftValues}
+                    onrowaction={handleRowAction}
+                    onrowselection={handleRowSelection}
+                    show-row-number-column>
+                </lightning-datatable>
+
+                <!-- ページネーション -->
+                <div class="slds-m-around_medium">
+                    <p class="slds-m-vertical_medium content">
+                        {totalRecount}件中&nbsp;{startRecord}件～{endRecord}件を表示中。
+                        {page}/{totalPage}ページ
+                    </p>
+
+                    <lightning-layout>
+                        <lightning-layout-item>
+                            <lightning-button
+                                label="前へ"
+                                icon-name="utility:chevronleft"
+                                onclick={previousHandler}
+                                disabled={isFirstPage}>
+                            </lightning-button>
+                        </lightning-layout-item>
+                        <lightning-layout-item flexibility="grow"></lightning-layout-item>
+                        <lightning-layout-item>
+                            <lightning-button
+                                label="次へ"
+                                icon-name="utility:chevronright"
+                                icon-position="right"
+                                onclick={nextHandler}
+                                disabled={isLastPage}>
+                            </lightning-button>
+                        </lightning-layout-item>
+                    </lightning-layout>
+                </div>
+            </template>
+
+            <!-- 初回アクセス時のみ表示するテキスト -->
+            <template if:true={showMessage}>
+                <div class="slds-p-around_medium slds-text-align_center slds-text-heading_medium">
+                    検索結果を設定後、検索ボタンよりレコードを検索してください。
+                </div>
+            </template>
+        </div>
+    </lightning-card>
+</template>
